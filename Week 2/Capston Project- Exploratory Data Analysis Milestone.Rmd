@@ -51,3 +51,26 @@ close(connection)
 rm(connection)
 ```
 
+### Summary of data
+
+Review criteria: Has the data scientist done basic summaries of the three files? Word counts, line counts and basic data tables?
+
+```{r}
+fileStats<- function(dataFile, data) {
+    fileSize <- file.info(dataFile)$size / 1024^2
+    charsNumber <- lapply(data, nchar)
+    charsMax <- which.max(charsNumber)
+    wordCount <- sum(sapply(strsplit(data, "\\s+"), length))
+    return(c(dataFile, format(round(as.double(fileSize), 2), nsmall=2), length(data), charsMax, wordCount))
+}
+
+    EnUsNewsStats<- fileStats("data/final/en_US/en_US.news.txt",  news)
+    EnUsBlogsStats <- fileStats("data/final/en_US/en_US.blogs.txt", blogs)
+    EnUsTwitterStats<- fileStats("data/final/en_US/en_US.twitter.txt", twitter)
+
+    DataSummary <- c(EnUsNewsStats, EnUsBlogsStats, EnUsTwitterStats)
+
+    df <- data.frame(matrix(unlist(DataSummary), nrow=3, byrow=T))
+    colnames(df) <- c("dataFile", "Size(MB)", "linesNumber", "Max Line Length", "WordCount")
+    print(df)
+```
