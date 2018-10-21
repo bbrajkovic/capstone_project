@@ -1,0 +1,7 @@
+setwd("~/Desktop/Capstone")
+twitter <- readLines(con <- file("data/final/en_US/en_US.twitter.txt"), encoding = "UTF-8", skipNul = TRUE)
+close(con)
+blogs <- readLines(con <- file("data/final/en_US/en_US.blogs.txt"), encoding = "UTF-8", skipNul = TRUE)
+close(con)
+news <- readLines(con <- file("data/final/en_US/en_US.news.txt"), encoding = "UTF-8", skipNul = TRUE)
+close(con)
