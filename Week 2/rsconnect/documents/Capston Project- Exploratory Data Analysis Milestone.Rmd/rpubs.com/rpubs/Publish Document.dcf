@@ -1,0 +1,10 @@
+name: Publish Document
+title:
+username:
+account: rpubs
+server: rpubs.com
+hostUrl: rpubs.com
+appId: https://api.rpubs.com/api/v1/document/431508/be96924554f5421d932102d44a7a70ae
+bundleId: https://api.rpubs.com/api/v1/document/431508/be96924554f5421d932102d44a7a70ae
+url: http://rpubs.com/bbrajkovic/431508
+when: 1540138994.19647

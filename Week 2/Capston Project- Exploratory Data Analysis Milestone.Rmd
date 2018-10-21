@@ -6,7 +6,11 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(
+	echo = TRUE,
+	message = FALSE,
+	warning = FALSE
+)
 ```
 
 ### Introduction to Analysis
@@ -19,11 +23,12 @@ The motivation for this project is to:
 3. Report any interesting findings that you amassed so far.
 4. Get feedback on your plans for creating a prediction algorithm and Shiny app.
 
-##### Review criterialess
+##### Review criteria
 1. Does the link lead to an HTML page describing the exploratory analysis of the training data set?
 2. Has the data scientist done basic summaries of the three files? Word counts, line counts and basic data tables?
 3. Has the data scientist made basic plots, such as histograms to illustrate features of the data?
 4. Was the report written in a brief, concise style, in a way that a non-data scientist manager could appreciate?
+
 
 ### Loading and downloading the data
 
@@ -40,7 +45,7 @@ if (!file.exists("./data/final")) {
 ```
 
 ##### Data Load
-```{r}
+```{r Data loading, echo=TRUE, message=FALSE, warning=FALSE}
 setwd("~/Desktop/Capstone")
 twitter <- readLines(connection <- file("data/final/en_US/en_US.twitter.txt"), encoding = "UTF-8", skipNul = TRUE)
 close(connection)
@@ -55,7 +60,7 @@ rm(connection)
 
 Review criteria: Has the data scientist done basic summaries of the three files? Word counts, line counts and basic data tables?
 
-```{r}
+```{r Data stats, echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
 fileStats<- function(dataFile, data) {
     fileSize <- file.info(dataFile)$size / 1024^2
     charsNumber <- lapply(data, nchar)
@@ -74,3 +79,176 @@ fileStats<- function(dataFile, data) {
     colnames(df) <- c("dataFile", "Size(MB)", "linesNumber", "Max Line Length", "WordCount")
     print(df)
 ```
+
+### Data Analysis
+
+Review criteria: Has the data scientist made basic plots, such as histograms to illustrate features of the data?
+
+```{r Data staging, echo=FALSE, message=FALSE, warning=FALSE}
+library(tm)
+library(ggplot2)
+
+makeCollection <- function(dataFile) {
+    collection <- paste(dataFile, collapse=" ")
+    collection <- VectorSource(collection)
+    collection <- Corpus(collection)
+}
+    
+cleanCollection <- function(collectionData) {
+    collectionData <- tm_map(collectionData, removeNumbers)
+    collectionData <- tm_map(collectionData, removePunctuation)
+    collectionData <- tm_map(collectionData, stripWhitespace)
+    return (collectionData)
+}
+
+findHighFreqWords <- function (collectionData) {
+    termSparse <- DocumentTermMatrix(collectionData)
+    termMatrix <- as.matrix(termSparse)
+    freqWords <- colSums(termMatrix)
+    freqWords <- as.data.frame(sort(freqWords, decreasing=TRUE))
+    freqWords$word <- rownames(freqWords)
+    colnames(freqWords) <- c("Frequency","word")
+    return (freqWords)
+}
+```
+
+
+##### US news dataset plot
+
+```{r news plot, echo=FALSE, message=FALSE, warning=FALSE}
+newsTextTest<-sample(news, round(0.001*length(news)), replace = F)
+newsTextCollection <- makeCollection(newsTextTest)
+newsTextCollection <- cleanCollection(newsTextCollection)
+newsMostFreqWord <- findHighFreqWords(newsTextCollection)
+newsMostFreqWordTop<- newsMostFreqWord[1:10,]
+
+p <- ggplot(data=newsMostFreqWordTop, 
+          aes(x=reorder(word,Frequency), 
+              y=Frequency,
+              fill=factor(reorder(word,-Frequency)))) + geom_bar(stat="identity") 
+
+p + xlab("Word") + labs(title = "Top 10 highest freq words: news")
+```
+
+
+##### US twitter dataset plot
+
+```{r twitter plot, echo=FALSE, message=FALSE, warning=FALSE}
+twitterTextTest<-sample(twitter, round(0.001*length(twitter)), replace = F)
+twitterTextCollection <- makeCollection(twitterTextTest)
+twitterTextCollection <- cleanCollection(twitterTextCollection)
+twitterMostFreqWord <- findHighFreqWords(twitterTextCollection)
+twitterMostFreqWordTop<- twitterMostFreqWord[1:10,]
+
+p <- ggplot(data=twitterMostFreqWordTop, 
+            aes(x=reorder(word,Frequency), 
+                y=Frequency,
+                fill=factor(reorder(word,-Frequency)))) + geom_bar(stat="identity") 
+
+p + xlab("Word") + labs(title = "Top 10 highest freq words: twitter")
+```
+
+
+##### US blogs dataset plot
+
+```{r blogs plot, echo=FALSE, message=FALSE, warning=FALSE}
+blogsTextTest<-sample(blogs, round(0.001*length(blogs)), replace = F)
+blogsTextCollection <- makeCollection(blogsTextTest)
+blogsTextCollection <- cleanCollection(blogsTextCollection)
+blogsMostFreqWord <- findHighFreqWords(blogsTextCollection)
+blogsMostFreqWordTop<- blogsMostFreqWord[1:10,]
+
+p <- ggplot(data=blogsMostFreqWordTop, 
+            aes(x=reorder(word,Frequency), 
+                y=Frequency,
+                fill=factor(reorder(word,-Frequency)))) + geom_bar(stat="identity") 
+
+p + xlab("Word") + labs(title = "Top 10 highest freq words: blogs")
+```
+
+##### N-grams News
+
+```{r News n-grams, echo=FALSE, message=FALSE, warning=FALSE}
+library(quanteda)
+sampleNewsText<-sample(news, round(0.01*length(news)), replace = F)
+newsTextTokens<- tokens(sampleNewsText,what ="word", remove_numbers = TRUE, 
+                        remove_punct = TRUE, remove_separators = TRUE, remove_symbols =TRUE )
+newsTextTokens <- tokens_tolower(newsTextTokens)
+newsTextTokens <- tokens_select(newsTextTokens, stopwords(),selection ="remove")
+
+newsTextUnigram <- tokens_ngrams(newsTextTokens, n=1)  
+newsTextUnigram.dfm <- dfm(newsTextUnigram, tolower =TRUE, remove = stopwords("english"), 
+                           remove_punct = TRUE)    
+
+newsTextBigram <- tokens_ngrams(newsTextTokens, n=2)  
+newsTextBigram.dfm <- dfm(newsTextBigram, tolower =TRUE, remove = stopwords("english"), 
+                          remove_punct = TRUE)
+
+newsTextTrigram <- tokens_ngrams(newsTextTokens, n=3)  
+newsTextTrigram.dfm <- dfm(newsTextTrigram, tolower =TRUE, remove = stopwords("english"), 
+                           remove_punct = TRUE)
+topfeatures(newsTextUnigram.dfm, 20)  
+topfeatures(newsTextBigram.dfm, 20)  
+topfeatures(newsTextTrigram.dfm, 20) 
+```
+
+##### N-grams Twitter
+
+```{r Twitter n-grams, echo=FALSE, message=FALSE, warning=FALSE}
+library(quanteda)
+sampleTwitterText<-sample(twitter, round(0.01*length(twitter)), replace = F)
+twitterTextTokens<- tokens(sampleTwitterText,what ="word", remove_numbers = TRUE, 
+                        remove_punct = TRUE, remove_separators = TRUE, remove_symbols =TRUE )
+twitterTextTokens <- tokens_tolower(twitterTextTokens)
+twitterTextTokens <- tokens_select(twitterTextTokens, stopwords(),selection ="remove")
+twitterTextUnigram <- tokens_ngrams(twitterTextTokens, n=1)  
+twitterTextUnigram.dfm <- dfm(twitterTextUnigram, tolower =TRUE, remove = stopwords("english"), 
+                           remove_punct = TRUE)    
+twitterTextBigram <- tokens_ngrams(twitterTextTokens, n=2)  
+twitterTextBigram.dfm <- dfm(twitterTextBigram, tolower =TRUE, remove = stopwords("english"), 
+                          remove_punct = TRUE)
+twitterTextTrigram <- tokens_ngrams(twitterTextTokens, n=3)  
+twitterTextTrigram.dfm <- dfm(twitterTextTrigram, tolower =TRUE, remove = stopwords("english"), 
+                           remove_punct = TRUE)
+topfeatures(twitterTextUnigram.dfm, 20)  
+topfeatures(twitterTextBigram.dfm, 20) 
+topfeatures(twitterTextTrigram.dfm, 20) 
+```
+
+##### N-grams Blogs
+
+```{r Blogs n-grams, echo=FALSE, message=FALSE, warning=FALSE}
+library(quanteda)
+sampleBlogsText<-sample(blogs, round(0.01*length(blogs)), replace = F)
+blogsTextTokens<- tokens(sampleBlogsText,what ="word", remove_numbers = TRUE, 
+                        remove_punct = TRUE, remove_separators = TRUE, remove_symbols =TRUE )
+blogsTextTokens <- tokens_tolower(blogsTextTokens)
+blogsTextTokens <- tokens_select(blogsTextTokens, stopwords(),selection ="remove")
+
+blogsTextUnigram <- tokens_ngrams(blogsTextTokens, n=1)
+blogsTextUnigram.dfm <- dfm(blogsTextUnigram, tolower =TRUE, remove = stopwords("english"), 
+                           remove_punct = TRUE)    
+
+blogsTextBigram <- tokens_ngrams(blogsTextTokens, n=2)
+blogsTextBigram.dfm <- dfm(blogsTextBigram, tolower =TRUE, remove = stopwords("english"), 
+                          remove_punct = TRUE)
+
+blogsTextTrigram <- tokens_ngrams(blogsTextTokens, n=3)
+blogsTextTrigram.dfm <- dfm(blogsTextTrigram, tolower =TRUE, remove = stopwords("english"), 
+                           remove_punct = TRUE)
+topfeatures(blogsTextUnigram.dfm, 20)
+topfeatures(blogsTextBigram.dfm, 20)
+topfeatures(blogsTextTrigram.dfm, 20)
+```
+
+### Conclusion
+
+##### Interesting findings
+
+Resources needed to process data are quite demanding and I had to do a lot of testing in order to get analysis to perform well. I had to sample data as well, where in some occurances there is around 1% of data used.
+
+##### Next steps
+
+- Create prediction model alghoritm with a larger sample.
+- Build larger n-grams
+- Create Shiny app to create better predictionc
