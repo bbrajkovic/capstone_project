@@ -1,5 +1,9 @@
 library(stringr)
 
+## 1. Question
+twitterInfo <- file.info("data/final/en_US/en_US.twitter.txt")
+twitterInfo$size / 1024^2
+
 ## 2. Question
 length(twitter)
 
